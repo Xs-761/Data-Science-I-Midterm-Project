@@ -1,0 +1,4 @@
+---
+title: "Data Science I, Midterm Project"
+output: github_document
+---
