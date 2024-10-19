@@ -11,9 +11,9 @@ output: github_document
   library(tidyr)
 
 # Preliminary Loading of All Datasets
-  NYC_Rental    = read.csv("./NYC Rental.csv")
-  NYC_Zipcode   = read.csv("./NYC Zipcode.csv")
-  US_House_Price= read.csv("./US Housing 2023.csv")
+  NYC_Rental     = read.csv("./NYC Rental.csv")
+  NYC_Zipcode    = read.csv("./NYC Zipcode.csv")
+  US_Housing_2023= read.csv("./US Housing 2023.csv")
 
 ```
 
@@ -44,7 +44,7 @@ output: github_document
   
 * **US_House_Price Dataset**
   * Description: Zillow Home Value Index (ZHVI) in regions across the United States in 2023
-  * Dimension: `r nrow(US_House_Price)` x `r ncol(US_House_Price)`
+  * Dimension: `r nrow(US_Housing_2023)` x `r ncol(US_Housing_2023)`
   * Issues require addressing:
   * Goals:
 
@@ -96,11 +96,11 @@ Data Quality Checking Steps, Issues Detected, and Fixing Procedures:
   
 ```
 
-##### Import, Tidy, and otherwise Clean the 2023 US Housing Data
+##### Import, Tidy, and otherwise Clean the US_Housing_2023 Data
 ```{r NYC_Housing_2023 Dataset}
 
-  US_House_Price = US_House_Price %>% janitor::clean_names() %>% drop_na()
-                   colnames(US_House_Price)[10:ncol(US_House_Price)] <- colnames(US_House_Price)[10:ncol(US_House_Price)] %>% sub("x", "", .) %>% gsub("_", "/", .)
+  US_Housing_2023 = US_Housing_2023 %>% janitor::clean_names() %>% drop_na()
+                    colnames(US_Housing_2023)[10:ncol(US_Housing_2023)] <- colnames(US_Housing_2023)[10:ncol(US_Housing_2023)] %>% sub("x", "", .) %>% gsub("_", "/", .)
                    
 ```
 
