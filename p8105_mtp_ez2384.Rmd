@@ -74,13 +74,13 @@ Merge the NYC Rental Dataset and Zipcode Dataset(by Zipcode); identify and resol
   * To distinguish county variables, I added post-fix afterwards to indicate the source dataset.
   * Replaced `NA` with "missing" for character variables and 0 for numeric variables so that the dataset does not have empty values.
 
-Description of resulting TIDY dataset(this is not the final Merged dataset):    
+Description of resulting TIDY dataset (this is not the final Merged dataset):    
 - Total Observations: `r nrow(Merged)`    
 - Unique Zipcodes:  `r n_distinct(Merged$zip_code)`  
 - Unique Neighborhoods: `r n_distinct(Merged$neighborhood) -1`    
 
 Data Quality Checking Steps, Issues Detected, and Fixing Procedures:    
-- There are 322 total records but only 320 unique zipcodes, implying 2 repetitive records. Upon further investigating, these records correspond to the zipcode of 10463 and 11201, which IN FACT associates with Bronx and Kings, respectively. Therefore, I have UPDATED the Merged dataset to reflect this change, and keep only the county_zipcode as the true county information, renamed it to "county"
+- There are 322 total records but only 320 unique zipcodes, implying 2 repetitive records. Upon further investigating, these records correspond to the zipcode of 10463 and 11201, which IN FACT associates with Bronx and Kings, respectively. Therefore, I have UPDATED the Merged dataset to reflect this change, and keep only the county_zipcode as the true county information, renamed it to "county"    
 - There are now two columns indicating the same county information, drop the redundant county_rental column.
 
 ```{r repetitive records}
