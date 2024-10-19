@@ -2,3 +2,117 @@
 title: "Data Science I, Midterm Project"
 output: github_document
 ---
+
+```{r Packages, message=FALSE}
+# Load Necessary Packages
+  library(ggplot2)
+  library(tidyverse)
+  library(dplyr)
+  library(tidyr)
+
+# Preliminary Loading of All Datasets
+  NYC_Rental    = read.csv("./NYC Rental.csv")
+  NYC_Zipcode   = read.csv("./NYC Zipcode.csv")
+  US_House_Price= read.csv("./US Housing 2023.csv")
+
+```
+
+### Problem 1: Data Import and Cleaning
+
+##### Provide a brief introduction to the raw data and the goals of your report
+* **NYC_Rental Datasest**
+  * Description: Zillow Observed Rent Index (ZORI) in New York City between January 2015 and August 2024
+  * Dimension: `r nrow(NYC_Rental)` x `r ncol(NYC_Rental)`
+  * Issues require addressing:
+    * In the raw dataset, *RegionName* actually correspond to zipcode within NYC, very misleading.
+    * Columns 2015/1/31 ~ 2024/8/31 contains lots of missing values.
+    * Column `RegionType`, `StateName`, `State`, `City` consists respectively values "zip", "NY", "NY", "New York" throughout and thus useless due to the nature of this dataset.
+  * Goals:
+    * Address the abovementioned issues.
+    * Clean and Tidy
+    * Merge the NYC_Zipcode Dataset with NYC_Rental Dataset.
+
+* **NYC_Zipcode Dataset**
+  * Description: Data on Zipcodes in NYC
+  * Dimension: `r nrow(NYC_Zipcode)` x `r ncol(NYC_Zipcode)`
+  * Issues require addressing:
+    * /
+  * Goals:
+    * Clean and Tidy
+    * Create a new column `borough` based on county names
+    * Merge with NYC_Rental Dataset
+  
+* **US_House_Price Dataset**
+  * Description: Zillow Home Value Index (ZHVI) in regions across the United States in 2023
+  * Dimension: `r nrow(US_House_Price)` x `r ncol(US_House_Price)`
+  * Issues require addressing:
+  * Goals:
+
+##### Import, Tidy, and otherwise Clean the NYC Rental Data & ZIP Code Data
+
+In the Zipcode Data, create a borough variable using county names.
+```{r NYC_Rental Dataset & NYC_Zipcode Dataset}
+
+  NYC_Rental = NYC_Rental %>% janitor::clean_names() %>% drop_na() %>% rename(., "zip_code"="region_name", "county"="county_name") %>% 
+               select(-region_type, -state_name, -state, -city) %>% relocate(zip_code) %>% arrange(zip_code)
+               colnames(NYC_Rental)[6:ncol(NYC_Rental)] <- colnames(NYC_Rental)[6:ncol(NYC_Rental)] %>% sub("x", "", .) %>% gsub("_", "/", .)
+               
+  NYC_Zipcode= NYC_Zipcode %>% janitor::clean_names() %>% 
+               mutate(borough=recode(county, "Bronx"="The Bronx", "Kings"="Brooklyn", "Queens"="Queens", "New York"="Manhattan", "Richmond"="Staten Island"), county=paste0(county, " County")) %>%
+               relocate(zip_code, county, borough) %>% arrange(zip_code)
+```
+
+Merge the NYC Rental Dataset and Zipcode Dataset(by Zipcode); identify and resolve any issues that arise.
+```{r Merge NYC_Rental Dataset & NYC_Zipcode Dataset}
+  Merged = left_join(x=NYC_Zipcode, y=NYC_Rental, by="zip_code") %>% rename("county_zipcode"="county.x", "county_rental"="county.y") %>% relocate(zip_code, county_zipcode, county_rental) %>%
+           mutate_if(is.character, ~ replace_na(., "missing")) %>% mutate_if(is.numeric, ~ replace_na(., 0))
+```
+* After merging, we have 2 potential problems:    
+  * Merged Dataset has conflicting column `county` as they appear in both constituting datasets.
+  * After merging, lots of missing values appeared as many observations from NYC_Rental dataset do not have matching records with the corresponding zip_code from NYC_Zipcode dataset.
+* Problem Solving
+  * To distinguish county variables, I added post-fix afterwards to indicate the source dataset.
+  * Replaced `NA` with "missing" for character variables and 0 for numeric variables so that the dataset does not have empty values.
+
+Description of resulting TIDY dataset(this is not the final Merged dataset):    
+- Total Observations: `r nrow(Merged)`    
+- Unique Zipcodes:  `r n_distinct(Merged$zip_code)`  
+- Unique Neighborhoods: `r n_distinct(Merged$neighborhood) -1`    
+
+Data Quality Checking Steps, Issues Detected, and Fixing Procedures:    
+- There are 322 total records but only 320 unique zipcodes, implying 2 repetitive records. Upon further investigating, these records correspond to the zipcode of 10463 and 11201, which IN FACT associates with Bronx and Kings, respectively. Therefore, I have UPDATED the Merged dataset to reflect this change, and keep only the county_zipcode as the true county information, renamed it to "county"
+- There are now two columns indicating the same county information, drop the redundant county_rental column.
+
+```{r repetitive records}
+# Check for repetitive lines #
+  Merged %>% select(c(1:3)) %>% group_by(zip_code) %>% filter(n() > 1) %>% ungroup()
+# Update Merged dataset to fix the error #
+  Merged = Merged %>% mutate(county_zipcode = case_when(
+    zip_code == 10463 ~ "Bronx County",
+    zip_code == 11201 ~ "Kings County",
+    TRUE ~ county_zipcode  # Keeps original values for non-matching rows
+  )) %>%
+    distinct(zip_code, .keep_all = TRUE) %>% select(-county_rental) %>% rename("county"="county_zipcode")
+  
+```
+
+##### Import, Tidy, and otherwise Clean the 2023 US Housing Data
+```{r NYC_Housing_2023 Dataset}
+
+  US_House_Price = US_House_Price %>% janitor::clean_names() %>% drop_na()
+                   colnames(US_House_Price)[10:ncol(US_House_Price)] <- colnames(US_House_Price)[10:ncol(US_House_Price)] %>% sub("x", "", .) %>% gsub("_", "/", .)
+                   
+```
+
+
+### Problem 2: Quality Control and EDA
+```{r}
+
+```
+
+### Problem 3: Visualization
+```{r}
+
+```
+
+
