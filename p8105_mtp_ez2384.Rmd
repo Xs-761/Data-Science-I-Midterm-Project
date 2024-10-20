@@ -11,180 +11,89 @@ output: github_document
   library(tidyr)
 
 # Preliminary Loading of All Datasets
-  NYC_Rental     = read.csv("./NYC Rental.csv")
-  NYC_Zipcode    = read.csv("./NYC Zipcode.csv")
-  US_Housing_2023= read.csv("./US Housing 2023.csv")
+  NYC_Rental_Price = read.csv("./NYC Rental.csv")
+  NYC_Zipcode      = read.csv("./NYC Zipcode.csv")
+  US_Housing_Price = read.csv("./US Housing 2023.csv")
 
 ```
 
 ### Problem 1: Data Import and Cleaning
 
-##### Provide a brief introduction to the raw data and the goals of your report
-* **NYC_Rental Datasest**
-  * Description: Zillow Observed Rent Index (ZORI) in New York City between January 2015 and August 2024
-  * Dimension: `r nrow(NYC_Rental)` x `r ncol(NYC_Rental)`
-  * Issues require addressing:
-    * In the raw dataset, *RegionName* actually correspond to zipcode within NYC, very misleading.
-    * Columns 2015/1/31 ~ 2024/8/31 contains lots of missing values.
-    * Column `RegionType`, `StateName`, `State`, `City` consists respectively values "zip", "NY", "NY", "New York" throughout and thus useless due to the nature of this dataset.
-  * Goals:
-    * Address the abovementioned issues.
-    * Clean and Tidy
-    * Merge the NYC_Zipcode Dataset with NYC_Rental Dataset.
+##### Raw Dataset Description   
+- `NYC_Rental_Price Dataset`    
+  - Description: contain detailed NYC Rental Prices between Jan.2015 to Aug.2024 listed by zip codes   
+  - Dimension: `r nrow(NYC_Rental_Price)` x `r ncol(NYC_Rental_Price)`    
+  - Issues:   
+    - ambiguous column names        
+      - Column name `RegionName` actually consists entirely of zipcode information, which is very misleading.   
+      - Column names of form `X2015.1.31` should be renamed for better readability.    
+    - redundant columns   
+      - Column `RegionID` is useless as we can treat the zipcode variable as the unique identifier.
+      - The entire dataset is within NYC so columns `StateName`, `State`, `City`, `Metro` can be removed.
+      - Column `SizeRank` is never used for future analysis.
+      - Column `RegionType` has only `r n_distinct(NYC_Rental_Price$RegionType)` level of value and is useless.
+    - too much missing data    
+  - Data Cleaning Strategy:
+    - Rename and Keep only the following columns: `county`, `zipcode`, and all date columns of form `%yyyy%mm%dd`.
+    - If missing data is zipcode then remove that particular observation entirely.    
+      Otherwise, Replace all missing values to "missing" (if character), to 0 (if numeric).
+- `NYC_Zipcode Dataset`   
+  - Description: contain detailed zipcode-location associations within NYC    
+  - Dimension: `r nrow(NYC_Zipcode)` x `r ncol(NYC_Zipcode)`    
+  - Issues:
+    - redundant columns
+      - Only column `County`, `ZipCode` is useful.
+  - Data Cleaning Strategy:
+    - Rename and Keep only columns `county` and `zipcode`.
+- `US_Housing_Price Dataset`    
+  - Description: contains detailed housing prices information within entire U.S. associated with specific area    
+  - Dimension: `r nrow(US_Housing_Price)` x `r ncol(US_Housing_Price)`   
+  - Issues:   
+    - ambiguous columns   
+      - Column name `RegionName` actually consists entirely of zipcode information, which is very misleading. 
+      - Column names of form `X2015.1.31` should be renamed for better readability.  
+    - redundant columns   
+      - Only zipcodes, State, and date columns are used in future analysis.   
+    - missing data
+  - Data Cleaning Strategy:   
+    - Rename and Keep only variables `zipcode`, `state`, and all date columns of form `%yyyy%mm%dd`.
+    - Remove entire record if contains NA values for zipcode;    
+      otherwise replace all missing string data to "missing" and all missing numeric values to 0.
+##### Data Cleaning Code Chunk
 
-* **NYC_Zipcode Dataset**
-  * Description: Data on Zipcodes in NYC
-  * Dimension: `r nrow(NYC_Zipcode)` x `r ncol(NYC_Zipcode)`
-  * Issues require addressing:
-    * /
-  * Goals:
-    * Clean and Tidy
-    * Create a new column `borough` based on county names
-    * Merge with NYC_Rental Dataset
+```{r Raw Data Cleaning}
+
+  NYC_Rental_Price = NYC_Rental_Price %>% janitor::clean_names() %>% select(-region_id, -size_rank, -region_type, -state_name, -state, -city, -metro) %>%
+                     rename("zipcode"="region_name", "county"="county_name") %>% mutate(county=gsub(" County","",county)) %>% mutate(across(where(is.numeric), \(x) round(x, 2))) %>%
+                     mutate_if(is.character, ~ replace_na(., "missing")) %>% mutate_if(is.numeric, ~ replace_na(., 0)) %>% arrange(zipcode)
+                     colnames(NYC_Rental_Price)[3:ncol(NYC_Rental_Price)] <- colnames(NYC_Rental_Price)[3:ncol(NYC_Rental_Price)] %>% sub("x", "", .) %>% gsub("_", "/", .) %>%
+                                                                             sub("(\\d{4})/(\\d{1})/(\\d{2})", "\\1/0\\2/\\3", .)
+                     
+  NYC_Zipcode = NYC_Zipcode %>% janitor::clean_names() %>% select(county, zip_code) %>% rename("zipcode"="zip_code") %>% arrange(zipcode) %>% relocate(zipcode)
   
-* **US_House_Price Dataset**
-  * Description: Zillow Home Value Index (ZHVI) in regions across the United States in 2023
-  * Dimension: `r nrow(US_Housing_2023)` x `r ncol(US_Housing_2023)`
-  * Issues require addressing:
-  * Goals:
+  US_Housing_Price = US_Housing_Price %>% janitor::clean_names() %>% select(region_name, state, starts_with("x")) %>% rename("zipcode"="region_name") %>%
+                     mutate_if(is.character, ~ replace_na(., "missing")) %>% mutate_if(is.numeric, ~ replace_na(., 0)) %>% arrange(zipcode)
+                     colnames(US_Housing_Price)[3:ncol(US_Housing_Price)] <- colnames(US_Housing_Price)[3:ncol(US_Housing_Price)] %>% sub("x", "", .) %>% gsub("_", "/", .) %>%
+                                                                             sub("(\\d{4})/(\\d{1})/(\\d{2})", "\\1/0\\2/\\3", .)
 
-##### Import, Tidy, and otherwise Clean the NYC Rental Data & ZIP Code Data
-
-In the Zipcode Data, create a borough variable using county names.
-```{r NYC_Rental Dataset & NYC_Zipcode Dataset}
-
-  NYC_Rental = NYC_Rental %>% janitor::clean_names() %>% drop_na() %>% rename(., "zip_code"="region_name", "county"="county_name") %>% 
-               select(-region_type, -state_name, -state, -city) %>% relocate(zip_code) %>% arrange(zip_code)
-               colnames(NYC_Rental)[6:ncol(NYC_Rental)] <- colnames(NYC_Rental)[6:ncol(NYC_Rental)] %>% sub("x", "", .) %>% gsub("_", "/", .)
-               
-  NYC_Zipcode= NYC_Zipcode %>% janitor::clean_names() %>% 
-               mutate(borough=recode(county, "Bronx"="The Bronx", "Kings"="Brooklyn", "Queens"="Queens", "New York"="Manhattan", "Richmond"="Staten Island"), county=paste0(county, " County")) %>%
-               relocate(zip_code, county, borough) %>% arrange(zip_code)
+  NYC_Rental_Price
+  NYC_Zipcode
+  US_Housing_Price
+                     
 ```
 
-Merge the NYC Rental Dataset and Zipcode Dataset(by Zipcode); identify and resolve any issues that arise.
-```{r Merge NYC_Rental Dataset & NYC_Zipcode Dataset}
-  Merged = left_join(x=NYC_Zipcode, y=NYC_Rental, by="zip_code") %>% rename("county_zipcode"="county.x", "county_rental"="county.y") %>% relocate(zip_code, county_zipcode, county_rental) %>%
-           mutate_if(is.character, ~ replace_na(., "missing")) %>% mutate_if(is.numeric, ~ replace_na(., 0))
-```
-* After merging, we have 2 potential problems:    
-  * Merged Dataset has conflicting column `county` as they appear in both constituting datasets.
-  * After merging, lots of missing values appeared as many observations from NYC_Rental dataset do not have matching records with the corresponding zip_code from NYC_Zipcode dataset.
-* Problem Solving
-  * To distinguish county variables, I added post-fix afterwards to indicate the source dataset.
-  * Replaced `NA` with "missing" for character variables and 0 for numeric variables so that the dataset does not have empty values.
+##### Report Objectives   
 
-Description of resulting TIDY dataset (this is not the final Merged dataset):    
-- Total Observations: `r nrow(Merged)`    
-- Unique Zipcodes:  `r n_distinct(Merged$zip_code)`  
-- Unique Neighborhoods: `r n_distinct(Merged$neighborhood) -1`    
 
-Data Quality Checking Steps, Issues Detected, and Fixing Procedures:    
-- There are 322 total records but only 320 unique zipcodes, implying 2 repetitive records. Upon further investigating, these records correspond to the zipcode of 10463 and 11201, which IN FACT associates with Bronx and Kings, respectively. Therefore, I have UPDATED the Merged dataset to reflect this change, and keep only the county_zipcode as the true county information, renamed it to "county"    
-- There are now two columns indicating the same county information, drop the redundant county_rental column.
 
-```{r repetitive records}
-# Check for repetitive lines #
-  Merged %>% select(c(1:3)) %>% group_by(zip_code) %>% filter(n() > 1) %>% ungroup()
-# Update Merged dataset to fix the error #
-  Merged = Merged %>% mutate(county_zipcode = case_when(
-    zip_code == 10463 ~ "Bronx County",
-    zip_code == 11201 ~ "Kings County",
-    TRUE ~ county_zipcode  # Keeps original values for non-matching rows
-  )) %>%
-    distinct(zip_code, .keep_all = TRUE) %>% select(-county_rental) %>% rename("county"="county_zipcode")
-  
-```
 
-##### Import, Tidy, and otherwise Clean the US_Housing_2023 Data
-```{r NYC_Housing_2023 Dataset}
 
-  US_Housing_2023 = US_Housing_2023 %>% janitor::clean_names() %>% drop_na() %>% rename("zip_code"="region_name") %>% arrange(zip_code) %>% relocate(zip_code)
-                    colnames(US_Housing_2023)[10:ncol(US_Housing_2023)] <- colnames(US_Housing_2023)[10:ncol(US_Housing_2023)] %>% sub("x", "", .) %>% gsub("_", "/", .)
-                   
-```
-Major Steps in Data Wrangling Process   
-- Restricted dataset to only variables necessary for later parts of the report (补齐)
-```{r}
-  US_Housing_2023 = US_Housing_2023 %>% select(-region_type)
-```
 
-- Using `sub()` and `gsub()` functions to make US_Housing_2023 dataset has column names of form "%yyyy%mm%dd" to stay consistent with that of the original    
-- Renamed misleading variable name "region_name" to "zip_code"; sorted dataset according to ascending zip_code, and relocate it to the very front   
 
-### Problem 2: Quality Control and EDA
 
-- There are 116 months between Jan.2015 and Aug.2024, but in the NYC Rental Dataset many ZIP codes have fewer than 116 observations. Discuss why this might be the case.
-  - The discrepancy might be due to the fact that
-- Compare the number of ZIP codes in the NYC Rental Dataset to the number of ZIP codes in the Zipcode dataset:
-  - The total number of Zipcodes in the NYC Rental Dataset is `r n_distinct(NYC_Rental$zip_code)` whereas the total number of Zipcodes in the Zipcode dataset is `r n_distinct(NYC_Zipcode$zip_code)`
-  - What reasons might explain any discrepancy?
-    - The discrepancy might be due to the fact that not all areas within the NYC have been researched thoroughly and the data are missing.
-    - Also, many of the original dataset contains empty values that was filtered out during data-cleaning procedures.
-- Create a reader-friendly table showing the average rental price in each borough and year(not month).    
-```{r table of mean rental price by borough and year}
 
-  Merged_longer = Merged |> pivot_longer(cols=starts_with("2"), names_to="date", values_to="rental_price") |> separate(date, into=c("year", "month", "day"), sep = "/")
 
-  temp_table = Merged_longer |> group_by(borough, year) |> summarise(mean_price = mean(rental_price[rental_price != 0]))
-  
-  Table_MeanPrice = temp_table |> pivot_wider(names_from=borough, values_from=mean_price) |> janitor::clean_names()
-  Table_MeanPrice
 
-```
-  
-  - The rental prices of all boroughs in New York City reveal a clear INCREASING TREND over years 2015 to 2024.
-  - Whereas Manhattan has MOST EXPENSIVE mean rental prices each year from 2015 to 2024 among all five boroughs of New York City, () has the LEAST EXPENSIVE ones.
 
-- For all available Zipcodes, compare rental prices in Jan.2021 to rental prices in Jan.2020.
-```{r}
-  
-  temp = Merged_longer |> filter( (year=="2020"|year=="2021") & month==c("1")) |> group_by(year) |> select(zip_code, year, rental_price) |> rename("January_of_Year"="year")
 
-  table_zip_Jan = temp |> pivot_wider(names_from=January_of_Year, values_from=rental_price) |> rename("Jan.2020"="2020", "Jan.2021"="2021") |> arrange(zip_code) |>
-                  mutate(absolute_change = Jan.2021-Jan.2020, relative_percentage_change = (Jan.2021 - Jan.2020) / Jan.2020 * 100)
-  table_zip_Jan
-
-```
-  
-  - As the previous table reveals, the rental prices in Jan.2021 compared to that in Jan.2020 suggests that 
-
-Make a table that shows, for each borough, the largest drop in price from 2020 to 2021; include the neighborhood with the largest drop.
-```{r}
-  temp2 = Merged_longer |> filter(year=="2020"|year=="2021") |> select(borough, neighborhood, year, month, day, rental_price)
-  temp3 = temp2 |> group_by(year, borough, neighborhood) |> summarise(mean_price=mean(rental_price))
-  temp4 = pivot_wider(temp3, names_from = year, values_from = mean_price) %>% mutate(drop=`2021`-`2020`) |> arrange(borough, desc(drop))
-  largest_drop = temp4 |> group_by(borough) |> slice(1) |> ungroup()
-  largest_drop
-```
-
-  
-### Problem 3: Visualization
-
-Make a plot showing NYC Rental Prices within Zipcodes for all available years. Your plot should facilitate comparisons across boroughs.
-- Include this visualization in your report and export it to a results directory in your repository.
-- Comment on any significant elements of this plot.
-```{r}
-
-```
-
-Using the US House Price dataset, compute the average house price within each Zipcode over each month in 2023.
-```{r}
-
-  US_Housing_2023_longer = US_Housing_2023 %>% pivot_longer(cols=contains("2023"), names_to="date", values_to="rental_price") %>% separate(col=date, into=c("year", "month", "day"), sep="/")
-  temp5 = US_Housing_2023_longer %>% group_by(zip_code, month) %>% summarise(mean_price = mean(rental_price), .groups = "keep") %>% mutate(month=as.numeric(month)) %>% arrange(zip_code, month)
-  average_price_US_2023 = temp5 %>% pivot_wider(names_from = month, values_from = mean_price)
-                          colnames(average_price_US_2023)[2:13] <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-  average_price_US_2023
-```
-
-Make a reader-friendly plot showing the distribution of Zipcode-level house prices across states; put differently, your plot should facilitate the comparison of the distribution of house prices across states.
-```{r}
-
-```
-
-Make a plot that shows Zipcode-specific housing prices against Zipcode-specific rental prices.
-```{r}
-
-```
 
