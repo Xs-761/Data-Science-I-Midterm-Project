@@ -121,8 +121,8 @@ After identifying non-unique zipcodes, rectify the cleaned datasets to ensure `z
   US_Housing_Price %>% group_by(zipcode) %>% filter(n() > 1) %>% distinct(zipcode)  # zipcodes all unique
   Merged %>% group_by(zipcode) %>% filter(n() > 1) %>% distinct(zipcode)            # zipcode 11201
 
-  NYC_Zipcode %>% filter(zipcode==11201 | zipcode==10463)       # correct data should be: 11201--Kings--Brooklyn & 10463--Bronx--Bronx
-  Merged %>% filter(zipcode==11201)                             # correct data should be: 11201--Kings--Brooklyn
+  NYC_Zipcode %>% filter(zipcode==11201 | zipcode==10463) %>% select(zipcode, county, borough) # correct data should be: 11201--Kings--Brooklyn & 10463--Bronx--Bronx
+  Merged %>% filter(zipcode==11201) %>% select(zipcode, county, borough)                       # correct data should be: 11201--Kings--Brooklyn
   
   NYC_Zipcode = NYC_Zipcode %>% filter(!(zipcode==11201 & county=="New York")) %>% filter(!(zipcode==10463 & county=="New York"))
   Merged = Merged %>% filter(!(zipcode==11201 & county=="New York"))
