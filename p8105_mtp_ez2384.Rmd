@@ -23,6 +23,7 @@ output: github_document
 - `NYC_Rental_Price Dataset`    
   - Description: contain detailed NYC Rental Prices between Jan.2015 to Aug.2024 listed by zip codes   
   - Dimension: `r nrow(NYC_Rental_Price)` x `r ncol(NYC_Rental_Price)`    
+  - Unique Zipcodes: `r n_distinct(NYC_Rental_Price$RegionName)`
   - Issues:   
     - ambiguous column names        
       - Column name `RegionName` actually consists entirely of zipcode information, which is very misleading.   
@@ -39,6 +40,7 @@ output: github_document
 - `NYC_Zipcode Dataset`   
   - Description: contain detailed zipcode-location associations within NYC    
   - Dimension: `r nrow(NYC_Zipcode)` x `r ncol(NYC_Zipcode)`    
+  - Unique Zipcodes: `r n_distinct(NYC_Zipcode$ZipCode)`
   - Issues:
     - redundant columns
       - Only column `County`, `ZipCode`, `Neighborhood` is useful.
@@ -68,8 +70,8 @@ output: github_document
                      colnames(NYC_Rental_Price)[3:ncol(NYC_Rental_Price)] <- colnames(NYC_Rental_Price)[3:ncol(NYC_Rental_Price)] %>% sub("x", "", .) %>% gsub("_", "/", .) %>%
                                                                              sub("(\\d{4})/(\\d{1})/(\\d{2})", "\\1/0\\2/\\3", .)
                      
-  NYC_Zipcode = NYC_Zipcode %>% janitor::clean_names() %>% select(county, zip_code, neighborhood) %>% rename("zipcode"="zip_code") %>% relocate(zipcode) %>% drop_na() %>%
-                mutate(borough=recode(county, "Kings"="Brooklyn", "New York"="Manhattan", "Richmond"="Staten Island"))
+  NYC_Zipcode = NYC_Zipcode %>% janitor::clean_names() %>% select(county, zip_code, neighborhood) %>% rename("zipcode"="zip_code") %>% drop_na() %>% 
+                mutate(borough=recode(county, "Kings"="Brooklyn", "New York"="Manhattan", "Richmond"="Staten Island")) %>% relocate(zipcode, county, borough)
   
   US_Housing_Price = US_Housing_Price %>% janitor::clean_names() %>% select(region_name, state, starts_with("x")) %>% rename("zipcode"="region_name") %>% drop_na() %>% arrange(zipcode)
                      colnames(US_Housing_Price)[3:ncol(US_Housing_Price)] <- colnames(US_Housing_Price)[3:ncol(US_Housing_Price)] %>% sub("x", "", .) %>% gsub("_", "/", .) %>%
@@ -80,7 +82,7 @@ output: github_document
 ##### [Code Chunk] Merge NYC_Rental and NYC_Zipcode Datasets       
 ```{r Merge Datasets}
 
-  Merged = left_join(x=NYC_Zipcode, y=NYC_Rental_Price, by="zipcode") %>% rename("county"="county.x") %>% select(-county.y) %>% relocate(zipcode, borough, county, neighborhood) %>% drop_na()
+  Merged = left_join(x=NYC_Zipcode, y=NYC_Rental_Price, by="zipcode") %>% rename("county"="county.x") %>% select(-county.y) %>% relocate(zipcode, county, borough, neighborhood) %>% drop_na()
 
 ```
 ##### [Discussion] Merged Datasets, Issues, Fixing
@@ -92,9 +94,11 @@ output: github_document
 
 - `NYC_Rental_Price` Dataset
   - Dimension: `r nrow(NYC_Rental_Price)` x `r ncol(NYC_Rental_Price)`
+  - Unique Zipcodes: `r n_distinct(NYC_Rental_Price$zipcode)`
 
 - `NYC_Zipcode` Dataset
   - Dimension: `r nrow(NYC_Zipcode)` x `r ncol(NYC_Zipcode)`
+  - Unique Zipcodes: `r n_distinct(NYC_Zipcode$zipcode)`
 
 - `US_Housing_Price` Dataset
   - Dimension `r nrow(US_Housing_Price)` x `r ncol(US_Housing_Price)`
@@ -103,6 +107,28 @@ output: github_document
   - Dimension `r nrow(Merged)` x `r ncol(Merged)`
   - Unique Zipcodes: `r n_distinct(Merged$zipcode)`
   - Unique Neighborhoods: `r n_distinct(Merged$neighborhood)`
+
+The distinction between datasets `NYC_Rental_Price` and `NYC_Zipcode` in terms of the number of Zipcodes is probably due to    
+1. There are non-unique zipcode present in the `NYC_Zipcode` dataset    
+1. Many records of the `NYC_Rental_Price` were removed due to incomplete data   
+1. The `NYC_Zipcode` dataset is not covering every corner within NYC so it is not as thorough as the zipcodes in the `NYC_Zipcode` dataset    
+
+After identifying non-unique zipcodes, rectify the cleaned datasets to ensure `zipcode` is unique-identifer among all datasets.
+```{r Ensure zipcode as unique-identifier}
+  
+  NYC_Rental_Price %>% group_by(zipcode) %>% filter(n() > 1) %>% distinct(zipcode)  # zipcodes all unique
+  NYC_Zipcode %>% group_by(zipcode) %>% filter(n() > 1) %>% distinct(zipcode)       # zipcode 10463 and 11201
+  US_Housing_Price %>% group_by(zipcode) %>% filter(n() > 1) %>% distinct(zipcode)  # zipcodes all unique
+  Merged %>% group_by(zipcode) %>% filter(n() > 1) %>% distinct(zipcode)            # zipcode 11201
+
+  NYC_Zipcode %>% filter(zipcode==11201 | zipcode==10463)       # correct data should be: 11201--Kings--Brooklyn & 10463--Bronx--Bronx
+  Merged %>% filter(zipcode==11201)                             # correct data should be: 11201--Kings--Brooklyn
+  
+  NYC_Zipcode = NYC_Zipcode %>% filter(!(zipcode==11201 & county=="New York")) %>% filter(!(zipcode==10463 & county=="New York"))
+  Merged = Merged %>% filter(!(zipcode==11201 & county=="New York"))
+  
+```
+
 
 ```{r}
 
