@@ -113,9 +113,28 @@ Major Steps in Data Wrangling Process
 - Renamed misleading variable name "region_name" to "zip_code"; sorted dataset according to ascending zip_code, and relocate it to the very front   
 
 ### Problem 2: Quality Control and EDA
-```{r}
+
+- There are 116 months between Jan.2015 and Aug.2024, but in the NYC Rental Dataset many ZIP codes have fewer than 116 observations. Discuss why this might be the case.
+  - The discrepancy might be due to the fact that
+- Compare the number of ZIP codes in the NYC Rental Dataset to the number of ZIP codes in the Zipcode dataset:
+  - The total number of Zipcodes in the NYC Rental Dataset is `r n_distinct(NYC_Rental$zip_code)` whereas the total number of Zipcodes in the Zipcode dataset is `r n_distinct(NYC_Zipcode$zip_code)`
+  - What reasons might explain any discrepancy?
+    - The discrepancy might be due to the fact that not all areas within the NYC have been researched thoroughly and the data are missing.
+    - Also, many of the original dataset contains empty values that was filtered out during data-cleaning procedures.
+- Create a reader-friendly table showing the average rental price in each borough and year(not month).    
+```{r table of mean rental price by borough and year}
+
+  Merged_longer = Merged |> pivot_longer(cols=starts_with("2"), names_to="date", values_to="rental_price") |> mutate(year=substr(date,1,4))
+
+  temp_table = Merged_longer |> group_by(borough, year) |> summarise(mean_price = mean(rental_price[rental_price != 0]))
+  
+  Table_MeanPrice = temp_table |> pivot_wider(names_from=borough, values_from=mean_price) |> janitor::clean_names()
+  Table_MeanPrice
 
 ```
+  
+  - The rental prices of all boroughs in New York City reveal a clear INCREASING TREND over years 2015 to 2024.
+  - Whereas Manhattan has MOST EXPENSIVE mean rental prices each year from 2015 to 2024 among all five boroughs of New York City, () has the LEAST EXPENSIVE ones.
 
 ### Problem 3: Visualization
 ```{r}
