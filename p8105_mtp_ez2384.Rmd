@@ -19,7 +19,7 @@ output: github_document
 
 ### Problem 1: Data Import and Cleaning
 
-##### Raw Dataset Description   
+##### [Discussion] Description and Processing of Raw Datasets   
 - `NYC_Rental_Price Dataset`    
   - Description: contain detailed NYC Rental Prices between Jan.2015 to Aug.2024 listed by zip codes   
   - Dimension: `r nrow(NYC_Rental_Price)` x `r ncol(NYC_Rental_Price)`    
@@ -35,16 +35,16 @@ output: github_document
     - too much missing data    
   - Data Cleaning Strategy:
     - Rename and Keep only the following columns: `county`, `zipcode`, and all date columns of form `%yyyy%mm%dd`.
-    - If missing data is zipcode then remove that particular observation entirely.    
-      Otherwise, Replace all missing values to "missing" (if character), to 0 (if numeric).
+    - Remove records containing empty values.
 - `NYC_Zipcode Dataset`   
   - Description: contain detailed zipcode-location associations within NYC    
   - Dimension: `r nrow(NYC_Zipcode)` x `r ncol(NYC_Zipcode)`    
   - Issues:
     - redundant columns
-      - Only column `County`, `ZipCode` is useful.
+      - Only column `County`, `ZipCode`, `Neighborhood` is useful.
   - Data Cleaning Strategy:
     - Rename and Keep only columns `county` and `zipcode`.
+    - Also per instruction required, add `borough` variable.
 - `US_Housing_Price Dataset`    
   - Description: contains detailed housing prices information within entire U.S. associated with specific area    
   - Dimension: `r nrow(US_Housing_Price)` x `r ncol(US_Housing_Price)`   
@@ -57,29 +57,55 @@ output: github_document
     - missing data
   - Data Cleaning Strategy:   
     - Rename and Keep only variables `zipcode`, `state`, and all date columns of form `%yyyy%mm%dd`.
-    - Remove entire record if contains NA values for zipcode;    
-      otherwise replace all missing string data to "missing" and all missing numeric values to 0.
-##### Data Cleaning Code Chunk
+    - Remove records containing empty values.
 
+##### [Code Chunk] Raw Data Cleaning    
 ```{r Raw Data Cleaning}
 
   NYC_Rental_Price = NYC_Rental_Price %>% janitor::clean_names() %>% select(-region_id, -size_rank, -region_type, -state_name, -state, -city, -metro) %>%
                      rename("zipcode"="region_name", "county"="county_name") %>% mutate(county=gsub(" County","",county)) %>% mutate(across(where(is.numeric), \(x) round(x, 2))) %>%
-                     mutate_if(is.character, ~ replace_na(., "missing")) %>% mutate_if(is.numeric, ~ replace_na(., 0)) %>% arrange(zipcode)
+                     drop_na() %>% arrange(zipcode)
                      colnames(NYC_Rental_Price)[3:ncol(NYC_Rental_Price)] <- colnames(NYC_Rental_Price)[3:ncol(NYC_Rental_Price)] %>% sub("x", "", .) %>% gsub("_", "/", .) %>%
                                                                              sub("(\\d{4})/(\\d{1})/(\\d{2})", "\\1/0\\2/\\3", .)
                      
-  NYC_Zipcode = NYC_Zipcode %>% janitor::clean_names() %>% select(county, zip_code) %>% rename("zipcode"="zip_code") %>% arrange(zipcode) %>% relocate(zipcode)
+  NYC_Zipcode = NYC_Zipcode %>% janitor::clean_names() %>% select(county, zip_code, neighborhood) %>% rename("zipcode"="zip_code") %>% relocate(zipcode) %>% drop_na() %>%
+                mutate(borough=recode(county, "Kings"="Brooklyn", "New York"="Manhattan", "Richmond"="Staten Island"))
   
-  US_Housing_Price = US_Housing_Price %>% janitor::clean_names() %>% select(region_name, state, starts_with("x")) %>% rename("zipcode"="region_name") %>%
-                     mutate_if(is.character, ~ replace_na(., "missing")) %>% mutate_if(is.numeric, ~ replace_na(., 0)) %>% arrange(zipcode)
+  US_Housing_Price = US_Housing_Price %>% janitor::clean_names() %>% select(region_name, state, starts_with("x")) %>% rename("zipcode"="region_name") %>% drop_na() %>% arrange(zipcode)
                      colnames(US_Housing_Price)[3:ncol(US_Housing_Price)] <- colnames(US_Housing_Price)[3:ncol(US_Housing_Price)] %>% sub("x", "", .) %>% gsub("_", "/", .) %>%
                                                                              sub("(\\d{4})/(\\d{1})/(\\d{2})", "\\1/0\\2/\\3", .)
-
-  NYC_Rental_Price
-  NYC_Zipcode
-  US_Housing_Price
                      
+```
+
+##### [Code Chunk] Merge NYC_Rental and NYC_Zipcode Datasets       
+```{r Merge Datasets}
+
+  Merged = left_join(x=NYC_Zipcode, y=NYC_Rental_Price, by="zipcode") %>% rename("county"="county.x") %>% select(-county.y) %>% relocate(zipcode, borough, county, neighborhood) %>% drop_na()
+
+```
+##### [Discussion] Merged Datasets, Issues, Fixing
+- The merged dataset has several issues, firstly there are many missing values under the county column from the `NYC_Rental_Price` dataset, so we drop `county.y` as all information is
+  available in `county.y`. The merged dataset has no missing values for the character variables `zipcode`, `borough`, `county` but has plenty of missing values for the numeric ones.
+  Remove records containing empty values.
+
+##### Discussion on TIDYed Dataset       
+
+- `NYC_Rental_Price` Dataset
+  - Dimension: `r nrow(NYC_Rental_Price)` x `r ncol(NYC_Rental_Price)`
+
+- `NYC_Zipcode` Dataset
+  - Dimension: `r nrow(NYC_Zipcode)` x `r ncol(NYC_Zipcode)`
+
+- `US_Housing_Price` Dataset
+  - Dimension `r nrow(US_Housing_Price)` x `r ncol(US_Housing_Price)`
+
+- The merged `Merged` Dataset
+  - Dimension `r nrow(Merged)` x `r ncol(Merged)`
+  - Unique Zipcodes: `r n_distinct(Merged$zipcode)`
+  - Unique Neighborhoods: `r n_distinct(Merged$neighborhood)`
+
+```{r}
+
 ```
 
 ##### Report Objectives   
