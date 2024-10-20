@@ -143,11 +143,22 @@ Major Steps in Data Wrangling Process
 
   table_zip_Jan = temp |> pivot_wider(names_from=January_of_Year, values_from=rental_price) |> rename("Jan.2020"="2020", "Jan.2021"="2021") |> arrange(zip_code) |>
                   mutate(absolute_change = Jan.2021-Jan.2020, relative_percentage_change = (Jan.2021 - Jan.2020) / Jan.2020 * 100)
+  table_zip_Jan
 
 ```
   
   - As the previous table reveals, the rental prices in Jan.2021 compared to that in Jan.2020 suggests that 
 
+Make a table that shows, for each borough, the largest drop in price from 2020 to 2021; include the neighborhood with the largest drop.
+```{r}
+  temp2 = Merged_longer |> filter(year=="2020"|year=="2021") |> select(borough, neighborhood, year, month, day, rental_price)
+  temp3 = temp2 |> group_by(year, borough, neighborhood) |> summarise(mean_price=mean(rental_price))
+  temp4 = pivot_wider(temp3, names_from = year, values_from = mean_price) %>% mutate(drop=`2021`-`2020`) |> arrange(borough, desc(drop))
+  largest_drop = temp4 |> group_by(borough) |> slice(1) |> ungroup()
+  largest_drop
+```
+
+  
 ### Problem 3: Visualization
 ```{r}
 
