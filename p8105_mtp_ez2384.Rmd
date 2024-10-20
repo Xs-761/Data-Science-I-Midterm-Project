@@ -163,7 +163,7 @@ Make a table that shows, for each borough, the largest drop in price from 2020 t
 
 Make a plot showing NYC Rental Prices within Zipcodes for all available years. Your plot should facilitate comparisons across boroughs.
 - Include this visualization in your report and export it to a results directory in your repository.
-- Commnt on any significant elements of this plot.
+- Comment on any significant elements of this plot.
 ```{r}
 
 ```
@@ -171,6 +171,11 @@ Make a plot showing NYC Rental Prices within Zipcodes for all available years. Y
 Using the US House Price dataset, compute the average house price within each Zipcode over each month in 2023.
 ```{r}
 
+  US_Housing_2023_longer = US_Housing_2023 %>% pivot_longer(cols=contains("2023"), names_to="date", values_to="rental_price") %>% separate(col=date, into=c("year", "month", "day"), sep="/")
+  temp5 = US_Housing_2023_longer %>% group_by(zip_code, month) %>% summarise(mean_price = mean(rental_price), .groups = "keep") %>% mutate(month=as.numeric(month)) %>% arrange(zip_code, month)
+  average_price_US_2023 = temp5 %>% pivot_wider(names_from = month, values_from = mean_price)
+                          colnames(average_price_US_2023)[2:13] <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+  average_price_US_2023
 ```
 
 Make a reader-friendly plot showing the distribution of Zipcode-level house prices across states; put differently, your plot should facilitate the comparison of the distribution of house prices across states.
