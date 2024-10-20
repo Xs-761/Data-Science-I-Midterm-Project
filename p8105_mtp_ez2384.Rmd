@@ -160,8 +160,26 @@ Make a table that shows, for each borough, the largest drop in price from 2020 t
 
   
 ### Problem 3: Visualization
+
+Make a plot showing NYC Rental Prices within Zipcodes for all available years. Your plot should facilitate comparisons across boroughs.
+- Include this visualization in your report and export it to a results directory in your repository.
+- Commnt on any significant elements of this plot.
 ```{r}
 
 ```
 
+Using the US House Price dataset, compute the average house price within each Zipcode over each month in 2023.
+```{r}
+
+```
+
+Make a reader-friendly plot showing the distribution of Zipcode-level house prices across states; put differently, your plot should facilitate the comparison of the distribution of house prices across states.
+```{r}
+
+```
+
+Make a plot that shows Zipcode-specific housing prices against Zipcode-specific rental prices.
+```{r}
+
+```
 
