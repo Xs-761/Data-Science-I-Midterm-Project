@@ -1,6 +1,8 @@
 ---
 title: "Data Science I, Midterm Project"
 output: github_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r Packages, message=FALSE}
@@ -9,6 +11,7 @@ output: github_document
   library(tidyverse)
   library(dplyr)
   library(tidyr)
+  library(patchwork)
 
 # Preliminary Loading of All Datasets
   NYC_Rental_Price = read.csv("./NYC Rental.csv")
@@ -16,8 +19,6 @@ output: github_document
   US_Housing_Price = read.csv("./US Housing 2023.csv")
 
 ```
-
-### Problem 1: Data Import and Cleaning
 
 ##### [Discussion] Description and Processing of Raw Datasets   
 - `NYC_Rental_Price Dataset`    
@@ -64,16 +65,15 @@ output: github_document
 ##### [Code Chunk] Raw Data Cleaning    
 ```{r Raw Data Cleaning}
 
-  NYC_Rental_Price = NYC_Rental_Price %>% janitor::clean_names() %>% select(-region_id, -size_rank, -region_type, -state_name, -state, -city, -metro) %>%
-                     rename("zipcode"="region_name", "county"="county_name") %>% mutate(county=gsub(" County","",county)) %>% mutate(across(where(is.numeric), \(x) round(x, 2))) %>%
-                     drop_na() %>% arrange(zipcode)
+  NYC_Rental_Price = NYC_Rental_Price %>% janitor::clean_names() %>% select(-region_id, -size_rank, -region_type, -state_name, -state, -city, -metro) %>% drop_na() %>%
+                     rename("zipcode"="region_name", "county"="county_name") %>% mutate(county=gsub(" County","",county)) %>% mutate(across(where(is.numeric), \(x) round(x, 2))) %>% arrange(zipcode)
                      colnames(NYC_Rental_Price)[3:ncol(NYC_Rental_Price)] <- colnames(NYC_Rental_Price)[3:ncol(NYC_Rental_Price)] %>% sub("x", "", .) %>% gsub("_", "/", .) %>%
                                                                              sub("(\\d{4})/(\\d{1})/(\\d{2})", "\\1/0\\2/\\3", .)
                      
-  NYC_Zipcode = NYC_Zipcode %>% janitor::clean_names() %>% select(county, zip_code, neighborhood) %>% rename("zipcode"="zip_code") %>% drop_na() %>% 
+  NYC_Zipcode = NYC_Zipcode %>% janitor::clean_names() %>% select(county, zip_code, neighborhood) %>% rename("zipcode"="zip_code") %>% drop_na() %>%
                 mutate(borough=recode(county, "Kings"="Brooklyn", "New York"="Manhattan", "Richmond"="Staten Island")) %>% relocate(zipcode, county, borough)
   
-  US_Housing_Price = US_Housing_Price %>% janitor::clean_names() %>% select(region_name, state, starts_with("x")) %>% rename("zipcode"="region_name") %>% drop_na() %>% arrange(zipcode)
+  US_Housing_Price = US_Housing_Price %>% janitor::clean_names() %>% select(region_name, state, starts_with("x")) %>% rename("zipcode"="region_name") %>% arrange(zipcode) %>% drop_na()
                      colnames(US_Housing_Price)[3:ncol(US_Housing_Price)] <- colnames(US_Housing_Price)[3:ncol(US_Housing_Price)] %>% sub("x", "", .) %>% gsub("_", "/", .) %>%
                                                                              sub("(\\d{4})/(\\d{1})/(\\d{2})", "\\1/0\\2/\\3", .)
                      
@@ -90,7 +90,7 @@ output: github_document
   available in `county.y`. The merged dataset has no missing values for the character variables `zipcode`, `borough`, `county` but has plenty of missing values for the numeric ones.
   Remove records containing empty values.
 
-##### Discussion on TIDYed Dataset       
+##### [Discussion] on TIDYed Dataset       
 
 - `NYC_Rental_Price` Dataset
   - Dimension: `r nrow(NYC_Rental_Price)` x `r ncol(NYC_Rental_Price)`
@@ -130,12 +130,111 @@ After identifying non-unique zipcodes, rectify the cleaned datasets to ensure `z
 ```
 
 
-```{r}
+##### [Code Chunk,Table1] showing average rental price in each borough and year    
+
+```{r pivot-longer table for datasets}
+
+  Merged_Longer = pivot_longer(Merged, cols=c(5:ncol(Merged)), names_to="date", values_to="rental_price") %>% separate(col=date, into=c("year", "month", "day"), sep="/")
+  NYC_Rental_Price_Longer = pivot_longer(NYC_Rental_Price, cols=c(3:ncol(NYC_Rental_Price)), names_to="date", values_to="rental_price") %>% separate(col=date, into=c("year", "month", "day"), sep="/")
+  US_Housing_Price_Longer = pivot_longer(US_Housing_Price, cols=c(3:ncol(US_Housing_Price)), names_to="date", values_to="housing_price") %>% separate(col=date, into=c("year", "month", "day"), sep="/")
+  
+```
+
+```{r Table showing average rental price in each borough and year}
+
+  temp = Merged_Longer %>% group_by(borough, year) %>% summarise(mean_rental_price=mean(rental_price, rm.na=TRUE))
+  Table1 = temp |> pivot_wider(names_from=borough, values_from=mean_rental_price) |> janitor::clean_names()
+  
+```
+
+##### [Discussion]    
+- The rental prices of all boroughs in New York City reveal a clear INCREASING TREND over years 2015 to 2024.   
+- Manhattan has MOST EXPENSIVE mean rental prices each year from 2015 to 2024 among all five boroughs of New York City.
+- Rental prices for Statan Island and Bronx are UNAVAILABLE.
+
+##### [Code Chunk,Table2] comparing rental prices from 2020 to 2021
+```{r Table comparing rental price from 2020 to 2021}
+    
+  temp = Merged_Longer %>% filter( (year=="2020"|year=="2021") & month==c("01") ) %>% group_by(year) %>% select(zipcode, year, rental_price) %>% rename("January_of_Year"="year")
+
+  Table2 = temp |> pivot_wider(names_from=January_of_Year, values_from=rental_price) |> rename("Jan.2020"="2020", "Jan.2021"="2021") |> arrange(zipcode) |>
+           mutate(absolute_change = Jan.2021-Jan.2020, relative_percentage_change = (Jan.2021 - Jan.2020) / Jan.2020 * 100) %>% mutate(across(where(is.numeric), \(x) round(x, 2)))
+```
+
+##### [Discussion]    
+- Rent prices experience decrease for the majority of the zipcodes from 2020 to 2021.   
+- Rental prices have fallen in 2021 relative to 2020 with an average drop ranging between 5% and 20%
+
+##### [Code Chunk,Table3] showing largest drop from 2020 to 2021; include the neighborhood with the largest drop.
+```{r Table showing largest drop from 2020 to 2021}
+ 
+  temp = Merged_Longer %>% filter(year=="2020"|year=="2021") %>% select(borough, neighborhood, year, month, day, rental_price) %>% group_by(year, borough, neighborhood) %>%
+         summarise(mean_rental_price=mean(rental_price)) %>% mutate(mean_rental_price = round(mean_rental_price, digits=2))
+  Table3 = pivot_wider(temp, names_from=year, values_from=mean_rental_price) %>% mutate(absolute_change=`2021`-`2020`) %>% arrange(borough, absolute_change) %>% group_by(borough) %>%
+           slice(1) %>% ungroup()
 
 ```
 
-##### Report Objectives   
+##### [Discussion]    
+- Manhattan's East Harlem shows a significant reduction in rental prices compared to other areas, suggesting that it was particularly affected in period from 2020 to 2021.
+- Brooklyn’s East New York and New Lots also saw a considerable decrease.
+- Queens borough experienced relatively smaller changes.
 
+
+##### [Code Chunk,Plot1] showing NYC Rental Prices within Zipcodes for all available years.
+
+
+##### [Code Chunk,Plot2] comparison of distribution of house prices across states.
+```{r Table4 & Plot2, fig.width=10, fig.height=10}
+
+  temp = US_Housing_Price_Longer %>% group_by(zipcode, month, state) %>% summarise(mean_housing_price=mean(housing_price), .groups="keep") %>% 
+         mutate(month=as.numeric(month), mean_housing_price=round(mean_housing_price,digits=0))
+
+  Table4 = temp %>% pivot_wider(names_from = month, values_from = mean_housing_price)
+           colnames(Table4)[3:ncol(Table4)] <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+  Plot2= ggplot(temp, aes(x=state, y=mean_housing_price, fill=state)) + geom_boxplot() + 
+         labs(title = "Distribution of Zipcode-level House Prices Across States", x = "State", y = "House Price") +
+         theme_light() + theme(plot.title = element_text(hjust = 0.5)) + theme(legend.position = "bottom") + guides(fill = guide_legend(ncol = 20)) + 
+         theme(legend.key.size = unit(0.5, "cm")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  Plot2
+         
+```
+
+##### [Discussion]    
+- There is significant variation of house prices across states in 2023, as indicated by the wide range in the box heights and the presence of outliers.   
+  For instance, states like California (CA) and New York (NY) show much higher house prices compared to states such as Kansas (KS) and Mississippi (MS).
+- Many states have several outliers, particularly California (CA), New York (NY), and Florida (FL). These outliers represent exceptionally high house prices in certain zip 
+  codes, possibly in premium or luxury neighborhoods.   
+  Conversely, in some states (e.g., Wyoming (WY), North Dakota (ND)), the house prices are more clustered, with fewer extreme outliers.
+- States like California (CA), New York (NY), and Hawaii (HI) generally have higher house prices, with their median values above $2 million in many cases.    
+  On the other end of the spectrum, states like Arkansas (AR) and Mississippi (MS) have much lower house prices, with most prices well under $500,000.
+
+##### [Code Chunk,Plot3] zipcode-specific housing prices against zipcode specific rental prices.
+```{r Plot3, fig.width=10, fig.height=10}
+  
+  temp = NYC_Rental_Price_Longer %>% filter(year=="2023") %>% select(zipcode, month, rental_price) %>% group_by(zipcode) %>% summarise(annual_mean_rental=mean(rental_price))
+  temp1= US_Housing_Price_Longer %>% filter(year=="2023") %>% select(zipcode, month, housing_price) %>% group_by(zipcode) %>% summarise(annual_mean_housing=mean(housing_price))
+  temp2= left_join(x=temp, y=temp1, by="zipcode") %>% drop_na()
+
+  Plot3_1 = ggplot(temp2, aes(x=as.factor(zipcode), y=annual_mean_rental, group=1)) + geom_line(color="darkgreen") +
+            labs(title = "Annual Mean Rental Prices by Zipcode in 2023",x = "Zipcode", y = "Annual Mean Rental Price") + theme_light() +
+            theme(axis.text.x = element_text(angle = 45, hjust = 1), plot.title=element_text(hjust=0.5))
+  Plot3_2 = ggplot(temp2, aes(x=as.factor(zipcode), y=annual_mean_housing, group=1)) + geom_line(color="darkblue") +
+            labs(title = "Annual Mean Housing Prices by Zipcode in 2023", x = "Zipcode", y = "Annual Mean Housing Price") + theme_light() +
+            theme(axis.text.x = element_text(angle = 45, hjust = 1), plot.title=element_text(hjust=0.5))
+
+  Plot3_1 / Plot3_2
+
+```
+
+##### [Discussion]    
+- We can see that the Housing Prices are overall significantly higher than the Rental Prices.   
+- The rental prices generally seem to cluster around the $3,000 to $4,500 range.    
+  On the other hand, the disparity between the most expensive and least expensive areas in terms of housing prices is substantial.    
+- Some zip codes, such as 10012 and 10013, stand out with higher rental prices that exceed $5,000.    
+  Certain zip codes like 10012 and 10013 have significantly higher housing prices, exceeding $3,000,000.    
+- The variation in housing prices is much larger compared to rental prices.     
 
 
 
