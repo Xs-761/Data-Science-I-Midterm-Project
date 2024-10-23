@@ -124,7 +124,7 @@ output: github_document
           facet_wrap(~borough, nrow=1, ncol=5) +
           theme_light() +
           theme(axis.text.x=element_text(angle=40, hjust=0.5, size=10), plot.title=element_text(hjust=0.5), legend.position="bottom") +
-          labs(title = "Zipcode-specific Annual Mean Rental Price Trends by Borough (2015-2024)", x = "Year", y = "Annual Mean Rental Price", color = "Borough") +
+          labs(title = "Zipcode-specific Annual Mean Rental Price Trends by Borough (2015-2024)", x = "Year", y = "Annual Mean Rental Price ($)", color = "Borough") +
           guides(fill=guide_legend(nrow=1))
   Plot1
 
@@ -134,7 +134,7 @@ output: github_document
           summarise(mean_housing_price=mean(housing_price, rm.na=TRUE)) %>% 
           ggplot(aes(x=state, y=mean_housing_price/ 1e6, fill=state)) + 
           geom_boxplot() + 
-          labs(title = "Distribution of Zipcode-level House Prices Across States", x = "State", y = "House Price (Million Dollars)") +
+          labs(title = "Distribution of Zipcode-level House Prices Across States", x = "State", y = "House Price (Million $)") +
           theme_light() +     
           theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom", legend.key.size = unit(0.5, "cm"), axis.text.x = element_text(angle = 45, hjust = 1)) + 
           guides(fill = guide_legend(ncol = 20))
@@ -144,10 +144,10 @@ output: github_document
   Plot3 = inner_join(x  = NYC_Rental_Price %>% filter(year==2023) %>% group_by(zipcode) %>% summarise(annual_mean_rental=mean(rental_price)), 
                      y  = US_Housing_Price %>% filter(city=="New York") %>% group_by(zipcode) %>% summarise(annual_mean_housing=mean(housing_price)), 
                      by = "zipcode") %>% 
-          ggplot(aes(x=annual_mean_housing, y=annual_mean_rental), rm.na=TRUE) + 
+          ggplot(aes(x=annual_mean_housing/1e6, y=annual_mean_rental), rm.na=TRUE) + 
           geom_point() +
           geom_smooth() +
-          labs(title="Zipcode-specific Housing Prices against Zipcode-specific Rental Prices", x="Annual Mean Housing Price", y="Annual Mean Rental Price") +
+          labs(title="Zipcode-specific Housing Prices against Zipcode-specific Rental Prices", x="Annual Mean Housing Price (Million $)", y="Annual Mean Rental Price($)") +
           theme_light() + 
           theme(plot.title=element_text(hjust=0.5))
   Plot3
