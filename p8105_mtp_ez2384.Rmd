@@ -110,7 +110,7 @@ output: github_document
 ```
 
 ##### Plots            
-```{r Plots, fig.width=10, fig.height=10}
+```{r Plots, fig.width=10, fig.height=10, warning=FALSE}
 
 # Plot1 --- NYC Rental Prices within ZIP codes for all available years facilitating comparisons across borough
   Plot1 = Merged %>% 
