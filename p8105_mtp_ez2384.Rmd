@@ -120,7 +120,7 @@ output: github_document
           summarise(mean_rental_price = mean(rental_price, rm.na=TRUE)) %>% 
           filter(!is.na(mean_rental_price)) %>% 
           ggplot(aes(x=year, y=mean_rental_price, group=zipcode, color=borough, rm.na=TRUE)) +
-          geom_smooth(se=FALSE, size=0.25) + 
+          geom_smooth(se=FALSE, size=0.5) + 
           facet_wrap(~borough, nrow=1, ncol=5) +
           theme_light() +
           theme(axis.text.x=element_text(angle=40, hjust=0.5, size=10), plot.title=element_text(hjust=0.5), legend.position="bottom") +
@@ -152,6 +152,7 @@ output: github_document
           theme(plot.title=element_text(hjust=0.5))
   Plot3
 
+  
 ```
 
 
