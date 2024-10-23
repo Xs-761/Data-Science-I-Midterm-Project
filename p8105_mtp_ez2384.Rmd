@@ -110,7 +110,7 @@ output: github_document
 ```
 
 ##### Plots            
-```{r Plots, fig.width=10, fig.height=10, warning=FALSE}
+```{r Plots, fig.width=12, fig.height=12, warning=FALSE}
 
 # Plot1 --- NYC Rental Prices within ZIP codes for all available years facilitating comparisons across borough
   Plot1 = Merged %>% 
@@ -123,8 +123,9 @@ output: github_document
           geom_smooth(se=FALSE, size=0.25) + 
           facet_wrap(~borough, nrow=1, ncol=5) +
           theme_light() +
-          theme(axis.text.x=element_text(angle=30, hjust=0.5, size=10), plot.title=element_text(hjust=0.5)) +
-          labs(title = "Zipcode-specific Annual Mean Rental Price Trends by Borough (2015-2024)", x = "Year", y = "Annual Mean Rental Price", color = "Borough")
+          theme(axis.text.x=element_text(angle=40, hjust=0.5, size=10), plot.title=element_text(hjust=0.5), legend.position="bottom") +
+          labs(title = "Zipcode-specific Annual Mean Rental Price Trends by Borough (2015-2024)", x = "Year", y = "Annual Mean Rental Price", color = "Borough") +
+          guides(fill=guide_legend(nrow=1))
   Plot1
 
 # Plot2 --- distribution of Zipcode level house prices across states facilitating comparison of the distribution of house prices across states
