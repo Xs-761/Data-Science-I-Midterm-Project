@@ -2,7 +2,25 @@
 title: "Data Science I, Midterm Project"
 output: github_document
 ---
-##### Load Packages    
+<style>
+table {
+  font-size: 12px;
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+
+th, td {
+  padding: 3px 7px;
+  text-align: center;
+}
+
+table, th, td {
+  border: 1px solid #ddd;
+}
+</style>
+
+
+##### **Load Packages & Raw Data Discussion**    
 ```{r Packages, message=FALSE}
 
 # Load Necessary Packages
@@ -10,16 +28,29 @@ output: github_document
   library(tidyverse)
   library(dplyr)
   library(tidyr)
+  library(rvest)
 
 # Preliminary Loading of All Datasets
   NYC_Rental_Price = read.csv("./NYC Rental.csv")
-  NYC_Zipcode      = read.csv("./NYC Zipcode.csv")
   US_Housing_Price = read.csv("./US Housing 2023.csv")
+  NYC_Zipcode      = rvest::read_html("https://p8105.com/data/zip_codes.html") %>% html_table(fill = TRUE) %>% mutate(.=.[[1]])
 
 ```
 
-##### Data Cleaning    
-```{r Data Cleaning}
+###### Discussion   
+  - Raw Data    
+    - `NYC_Zipcode` Dataset   
+      - Dimension: `r nrow(NYC_Zipcode)` x `r ncol(NYC_Zipcode)`    
+      - Description: The `NYC_Zipcode` Dataset contains data of Zipcode-Location associations within entire NYC.    
+    - `NYC_Rental_Price` Dataset    
+      - Dimension: `r nrow(NYC_Rental_Price)` x `r ncol(NYC_Rental_Price)`    
+      - Description: The `NYC_Rental_Price` Dataset contains rental price data within NYC from year 2015 to 2018.    
+    - `US_Housing_Price`  Dataset  
+      - Dimension: `r nrow(US_Housing_Price)` x `r ncol(US_Housing_Price)`    
+      - Description: The `US_Housing_Price` Dataset contains housing price data within entire U.S. in year 2023.    
+
+##### **Data Cleaning**    
+```{r Data Cleaning, warning=FALSE}
 
 # Raw-Data -> Pivot Longer -> Filter out Redundant Columns
   NYC_Rental_Price = NYC_Rental_Price %>% 
@@ -46,13 +77,10 @@ output: github_document
                      arrange(zipcode) %>%
                      pivot_longer(cols=starts_with("x"), names_to="date", values_to="housing_price") %>% 
                      mutate(date=gsub("x","",date)) %>% 
-                     mutate(date=gsub("_","/",date))
+                     mutate(date=gsub("_","/",date)) %>% 
+                     relocate(zipcode)
 
 # Rectify incorrect zipcodes
-  NYC_Rental_Price %>% group_by(zipcode) %>% filter(n() > 1) %>% distinct(zipcode)  # zipcodes all unique
-  US_Housing_Price %>% group_by(zipcode) %>% filter(n() > 1) %>% distinct(zipcode)  # zipcodes all unique
-  NYC_Zipcode %>% group_by(zipcode) %>% filter(n() > 1) %>% distinct(zipcode)       # zipcode 10463 and 11201
-  
   NYC_Zipcode %>% filter(zipcode==11201 | zipcode==10463) %>% select(zipcode, county, borough) # correct data should be: 11201--Kings--Brooklyn & 10463--Bronx--Bronx
   NYC_Zipcode = NYC_Zipcode %>% filter(!(zipcode==11201 & county=="New York")) %>% filter(!(zipcode==10463 & county=="New York")) # select all correct zipcodes
 
@@ -64,8 +92,27 @@ output: github_document
 
 ```
 
-##### Tables           
-```{r Tables}
+###### Problem1 Discussion   
+- Identify and Solve Issues arise when merging.   
+  - When merging the datasets, a warning message appears: Detected an unexpected many-to-many relationship between x and y variables. This implies that the merging key "zipcode" is not unique in the `NYC_Zipcode` dataset.   
+  - Upon closer checking, zipcode are all unique in `NYC_Rental_Price` and `NYC_Housing Price` datasets, but contain duplicate values 10463 and 11201 in the `NYC_Zipcode` dataset. Remove the incorrect records leave us with the correct records 11201--Kings--Brooklyn & 10463--Bronx--Bronx.   
+  - Upon removal of incorrect observations, the join was performed successfully with the resulting `Merged` dataset.
+- Description on the `Merged` dataset:      
+  - Dimension: `r nrow(Merged)` x `r ncol(Merged)`.     
+  - Unique Zipcodes Included: `r n_distinct(Merged$zipcode)`    
+  - Unique Neighborhood Include: `r n_distinct(Merged$neighborhood)`    
+- Data Cleaning Processes   
+  - Misleading Column Names   
+    - In both `NYC_Rental_Price` and `US_Housing_Price` datasets, changed `RegionName` to `zipcode`.   
+  - Convert Dataframe Layout    
+    - Converted `NYC_Rental_Price` and `NYC_Rental_Price` to a longer format with all date variables listed under column `date` and values listed under column `rental_price` and `housing_price`, respectively.       
+  - Redundant Column Names    
+    - In `NYC_Zipcode` dataset, I kept only the `zipcode`, `county`, `borough`, `neighborhood` columns.   
+    - In `NYC_Rental_Price` dataset, I kept only the `zipcode`, `county`, `date`, `rental_price` columns.   
+    - In `US_Housing_Price` dataset, I kept only the `zipcode`, `city`, `state`, `housing_price` columns.   
+
+##### **Tables**           
+```{r Tables, results=FALSE, message=FALSE}
 
 # Table 1 --- average rental price in each borough and year
   Table1 = Merged %>% 
@@ -98,7 +145,7 @@ output: github_document
             group_by(borough) %>%
             arrange(borough, desc(drop)) %>%
             slice(1) %>%
-            select(borough, neighborhood, drop)
+            select(-zipcode, -month, -day, -county)
 
 # Table 4 --- average house price within each ZIP code over 2023
   Table4 = US_Housing_Price %>% 
@@ -109,8 +156,32 @@ output: github_document
            select(-year)
 ```
 
-##### Plots            
-```{r Plots, fig.width=12, fig.height=12, warning=FALSE}
+###### Problem2 Discussion    
+- The reason why there is 116 months between Jan.2015 to Aug.2024 but there are much fewer months in the `NYC_Rental_Price` dataset is likely because:    
+  - The company considered some of the Months within this period do not have sufficiently meaningful research values for collection.    
+  - The company decided not to include some of the Months as the rental prices data are too incomplete within this period.    
+- The reason why the number of zipcodes in the `NYC_Rental_Price` dataset is `r n_distinct(NYC_Rental_Price$zipcode)` whereas that in the `NYC_Zipcode` dataset is `r n_distinct(NYC_Zipcode$zipcode)` is likely due to:   
+  - The company considered not necessary to include rental price data for every single zipcode within NYC.    
+- The following Table1 shows the average rental price in each borough and year:    
+`r knitr::kable(Table1)`  
+- Remarks on Table1   
+  - Across most boroughs, rental prices has a general increasing trend over year 2015-2024.   
+  - Manhattan has the highest rental prices among all boroughs, with prices rising from 3022.04 in 2015 to 4078.44 in 2024.   
+  - For Staten Island, the data is missing from 2015 to 2019. From 2020 onward, values are recorded.    
+  - Price variation between boroughs is significant: Manhattan consistenty has the highest rental prices while the Staten Island has the lowest prices(for available years).    
+- The following is a selection of Table2 giving a comparison of rental prices in Jan.2021 to rental prices in Jan.2020:   
+`r knitr::kable(head(Table2, n=20))`    
+- Remarks on Table2   
+  - For most zipcodes, rental prices decreased from Jan.2020 to Jan.2021.   
+- The following Table3 gives the largest drop in price from Jan.2020 to Jan.2021 with neighborhoods included:   
+`r knitr::kable(Table3)`    
+- Remarks on Table3   
+  - For all available boroughs and among those neighborhoods with the highest price drop from Jan.2020 to Jan.2021, `Lower Manhattan` has the largest price decrease of `$912.60` and `Southeast Bronx` has the least price decrease of `$16.46`.   
+  - Rental prices in Bronx as a whole did not drop significantly between Jan.2020 to Jan.2021.    
+  - Staten Island data in both Jan.2020 and Jan.2021 are unavailable for analysis.  
+
+##### **Plots**            
+```{r Plots, fig.width=12, fig.height=12, warning=FALSE, include=FALSE}
 
 # Plot1 --- NYC Rental Prices within each zipcode for all available years facilitating comparisons across borough
   Plot1 = Merged %>% 
@@ -130,6 +201,7 @@ output: github_document
           labs(title = "Zipcode-specific Annual Mean Rental Price Trends by Borough (2015-2024)", x = "Year", y = "Annual Mean Rental Price ($)", color = "Borough") +
           guides(fill=guide_legend(nrow=1))
   Plot1
+  ggsave("./results/Plot1.pdf", height=10, width=15)
 
 # Plot2 --- distribution of Zipcode level house prices across states facilitating comparison of the distribution of house prices across states
   Plot2 = US_Housing_Price %>% 
@@ -140,9 +212,9 @@ output: github_document
           geom_boxplot() + 
           labs(title = "Distribution of Zipcode-level House Prices Across States", x = "State", y = "House Price (Million $)") +
           theme_light() +     
-          theme(plot.title = element_text(hjust = 0.5, face="bold", size=12), legend.position = "bottom", legend.key.size = unit(0.5, "cm"), axis.text.x = element_text(angle = 45, hjust = 1)) + 
-          guides(fill = guide_legend(ncol = 20))
+          theme(plot.title = element_text(hjust = 0.5, face="bold", size=15), axis.text.x = element_text(angle = 45, hjust = 1), legend.position="none")
   Plot2
+  ggsave("./results/Plot2.pdf", height=10, width=12)
   
 # Plot3 --- Zipcode specific housing prices against Zipcode specific rental prices ( In NYC 2023 )
   Plot3 = inner_join(x=NYC_Rental_Price %>% separate(date, into=c("year","month","day"), sep="/") %>% filter(year==2023) %>% group_by(zipcode) %>% summarise(annual_mean_rental=mean(rental_price)), 
@@ -155,8 +227,35 @@ output: github_document
           theme_light() + 
           theme(plot.title=element_text(hjust=0.5, face="bold", size=12))
   Plot3
-
+  ggsave("./results/Plot3.pdf", height=10, width=10)
   
 ```
+
+###### Problem3 Discussion    
+```{r, fig.width=15, fig.height=10}
+  Plot1
+```
+
+- Plot1 Remarks   
+  - Large Geographic Rental Disparities, with Manhattan having the highest rental prices while Bronx has relatively the lowest.  
+  - General upward rental price trend across all boroughs especially in Manhattan and Brooklyn.   
+  - Impact of COVID-19 is clear as there is a salient drop in rental prices across most boroughs in pandemic-severe time periods.   
+  - Staten Island has lots of missing data.   
+```{r, fig.width=12, fig.height=10}
+  Plot2
+```
+
+- Plot2 Remarks   
+  - CA shows the highest house prices with some zipcodes exceeding $6 million, whereas WV has the least.    
+  - All states have median below $1 million.
+  - High Variability: CA, NY, CO; suggesting wider range of house prices    
+    Low Variability: WV, AR, MS; suggesting more uniform house prices   
+```{r, fig.width=7, fig.height=7}
+  Plot3
+```
+
+- Plot3 Remarks   
+  - General positive correlation between housing prices and rental prices by zipcode.
+
 
 
