@@ -39,15 +39,17 @@ table, th, td {
 
 ###### Discussion   
   - Raw Data    
-    - `NYC_Zipcode` Dataset   
+    - `NYC_Zipcode`  
       - Dimension: `r nrow(NYC_Zipcode)` x `r ncol(NYC_Zipcode)`    
       - Description: The `NYC_Zipcode` Dataset contains data of Zipcode-Location associations within entire NYC.    
-    - `NYC_Rental_Price` Dataset    
+    - `NYC_Rental_Price`  
       - Dimension: `r nrow(NYC_Rental_Price)` x `r ncol(NYC_Rental_Price)`    
       - Description: The `NYC_Rental_Price` Dataset contains rental price data within NYC from year 2015 to 2018.    
-    - `US_Housing_Price`  Dataset  
+    - `US_Housing_Price`    
       - Dimension: `r nrow(US_Housing_Price)` x `r ncol(US_Housing_Price)`    
       - Description: The `US_Housing_Price` Dataset contains housing price data within entire U.S. in year 2023.    
+  - Goal
+    - Clean, Analyze, Interpret, Visualize using NYC_Rental and US_Housing datasets
 
 ##### **Data Cleaning**    
 ```{r Data Cleaning, warning=FALSE}
@@ -93,19 +95,16 @@ table, th, td {
 ```
 
 ###### Problem1 Discussion   
-- Identify and Solve Issues arise when merging.   
-  - When merging the datasets, a warning message appears: Detected an unexpected many-to-many relationship between x and y variables. This implies that the merging key "zipcode" is not unique in the `NYC_Zipcode` dataset.   
-  - Upon closer checking, zipcode are all unique in `NYC_Rental_Price` and `NYC_Housing Price` datasets, but contain duplicate values 10463 and 11201 in the `NYC_Zipcode` dataset. Remove the incorrect records leave us with the correct records 11201--Kings--Brooklyn & 10463--Bronx--Bronx.   
+  - When merging datasets, warning message appears: Detected an unexpected many-to-many relationship between x and y variables, implying "zipcode" is not unique in `NYC_Zipcode` dataset.   
+  - Upon checking, zipcode all unique in `NYC_Rental_Price` and `NYC_Housing Price`, but contain duplicate values 10463 and 11201 in `NYC_Zipcode`. Remove incorrect records.   
   - Upon removal of incorrect observations, the join was performed successfully with the resulting `Merged` dataset.
 - Description on the `Merged` dataset:      
   - Dimension: `r nrow(Merged)` x `r ncol(Merged)`.     
   - Unique Zipcodes Included: `r n_distinct(Merged$zipcode)`    
   - Unique Neighborhood Include: `r n_distinct(Merged$neighborhood)`    
-- Data Cleaning Processes   
-  - Misleading Column Names   
-    - In both `NYC_Rental_Price` and `US_Housing_Price` datasets, changed `RegionName` to `zipcode`.   
-  - Convert Dataframe Layout    
-    - Converted `NYC_Rental_Price` and `NYC_Rental_Price` to a longer format with all date variables listed under column `date` and values listed under column `rental_price` and `housing_price`, respectively.       
+- Data Manipulation   
+  - In both `NYC_Rental_Price` and `US_Housing_Price` datasets, changed `RegionName` to `zipcode`.   
+  - Converted `NYC_Rental_Price` and `NYC_Rental_Price` to a longer format with all date variables listed under column `date` and values listed under column `rental_price` and `housing_price`, respectively.       
   - Redundant Column Names    
     - In `NYC_Zipcode` dataset, I kept only the `zipcode`, `county`, `borough`, `neighborhood` columns.   
     - In `NYC_Rental_Price` dataset, I kept only the `zipcode`, `county`, `date`, `rental_price` columns.   
@@ -157,12 +156,12 @@ table, th, td {
 ```
 
 ###### Problem2 Discussion    
-- The reason why there is 116 months between Jan.2015 to Aug.2024 but there are much fewer months in the `NYC_Rental_Price` dataset is likely because:    
-  - The company considered some of the Months within this period do not have sufficiently meaningful research values for collection.    
-  - The company decided not to include some of the Months as the rental prices data are too incomplete within this period.    
-- The reason why the number of zipcodes in the `NYC_Rental_Price` dataset is `r n_distinct(NYC_Rental_Price$zipcode)` whereas that in the `NYC_Zipcode` dataset is `r n_distinct(NYC_Zipcode$zipcode)` is likely due to:   
-  - The company considered not necessary to include rental price data for every single zipcode within NYC.    
-- The following Table1 shows the average rental price in each borough and year:    
+- Month Discrepancy      
+  - Some months do not have meaningful research values for collection.
+  - Decided not to include some Months as the rental prices data are too incomplete within this period.    
+- Zipcode Discrepancy   
+  - `NYC_Rental_Price` dataset has `r n_distinct(NYC_Rental_Price$zipcode)` but `NYC_Zipcode` dataset has `r n_distinct(NYC_Zipcode$zipcode)` zipcodes is because it is not necessary to include rental price data for every single zipcode within NYC.    
+- Table1:    
 `r knitr::kable(Table1)`  
 - Remarks on Table1   
   - Across most boroughs, rental prices has a general increasing trend over year 2015-2024.   
@@ -171,14 +170,14 @@ table, th, td {
   - Price variation between boroughs is significant: Manhattan consistenty has the highest rental prices while the Staten Island has the lowest prices(for available years).    
 - The following is a selection of Table2 giving a comparison of rental prices in Jan.2021 to rental prices in Jan.2020:   
 `r knitr::kable(head(Table2, n=20))`    
-- Remarks on Table2   
+- Table2   
   - For most zipcodes, rental prices decreased from Jan.2020 to Jan.2021.   
 - The following Table3 gives the largest drop in price from Jan.2020 to Jan.2021 with neighborhoods included:   
 `r knitr::kable(Table3)`    
-- Remarks on Table3   
-  - For all available boroughs and among those neighborhoods with the highest price drop from Jan.2020 to Jan.2021, `Lower Manhattan` has the largest price decrease of `$912.60` and `Southeast Bronx` has the least price decrease of `$16.46`.   
-  - Rental prices in Bronx as a whole did not drop significantly between Jan.2020 to Jan.2021.    
-  - Staten Island data in both Jan.2020 and Jan.2021 are unavailable for analysis.  
+- Table3   
+  - `Lower Manhattan` has the largest price decrease of `$912.60` and `Southeast Bronx` has the least price decrease of `$16.46`.   
+  - Rental prices in Bronx did not drop significantly.    
+  - Staten Island data unavailable.  
 
 ##### **Plots**            
 ```{r Plots, fig.width=12, fig.height=12, warning=FALSE, include=FALSE}
@@ -232,30 +231,31 @@ table, th, td {
 ```
 
 ###### Problem3 Discussion    
-```{r, fig.width=15, fig.height=10}
+```{r, fig.width=15, fig.height=10, message=FALSE, warning=FALSE}
   Plot1
 ```
 
 - Plot1 Remarks   
-  - Large Geographic Rental Disparities, with Manhattan having the highest rental prices while Bronx has relatively the lowest.  
-  - General upward rental price trend across all boroughs especially in Manhattan and Brooklyn.   
-  - Impact of COVID-19 is clear as there is a salient drop in rental prices across most boroughs in pandemic-severe time periods.   
-  - Staten Island has lots of missing data.   
-```{r, fig.width=12, fig.height=10}
+  - Large Geographic Rental Disparities.  
+  - General upward rental price trend.   
+  - Impact of COVID-19 is clear.   
+  - Staten Island has lots missing data.   
+```{r, fig.width=12, fig.height=10, message=FALSE, warning=FALSE}
   Plot2
 ```
 
 - Plot2 Remarks   
-  - CA shows the highest house prices with some zipcodes exceeding $6 million, whereas WV has the least.    
-  - All states have median below $1 million.
+  - CA has highest house prices whereas WV has the least.    
+  - All states median below $1 million.
   - High Variability: CA, NY, CO; suggesting wider range of house prices    
     Low Variability: WV, AR, MS; suggesting more uniform house prices   
-```{r, fig.width=7, fig.height=7}
+```{r, fig.width=7, fig.height=7, message=FALSE, warning=FALSE}
   Plot3
 ```
 
 - Plot3 Remarks   
-  - General positive correlation between housing prices and rental prices by zipcode.
+  - General positive correlation.
 
-
+- Limitations:
+  - Plentiful unavailable data for Staten Island.
 
