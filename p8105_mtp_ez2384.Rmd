@@ -2,25 +2,7 @@
 title: "Data Science I, Midterm Project"
 output: github_document
 ---
-<style>
-table {
-  font-size: 12px;
-  border-collapse: collapse;
-  margin: 0 auto;
-}
 
-th, td {
-  padding: 3px 7px;
-  text-align: center;
-}
-
-table, th, td {
-  border: 1px solid #ddd;
-}
-</style>
-
-
-##### **Load Packages & Raw Data Discussion**    
 ```{r Packages, message=FALSE}
 
 # Load Necessary Packages
@@ -37,7 +19,6 @@ table, th, td {
 
 ```
 
-###### Discussion   
   - Raw Data    
     - `NYC_Zipcode`  
       - Dimension: `r nrow(NYC_Zipcode)` x `r ncol(NYC_Zipcode)`    
@@ -51,7 +32,6 @@ table, th, td {
   - Goal
     - Clean, Analyze, Interpret, Visualize using NYC_Rental and US_Housing datasets
 
-##### **Data Cleaning**    
 ```{r Data Cleaning, warning=FALSE}
 
 # Raw-Data -> Pivot Longer -> Filter out Redundant Columns
@@ -94,8 +74,7 @@ table, th, td {
 
 ```
 
-###### Problem1 Discussion   
-  - When merging datasets, warning message appears: Detected an unexpected many-to-many relationship between x and y variables, implying "zipcode" is not unique in `NYC_Zipcode` dataset.   
+  - When merging datasets, warning message appears   
   - Upon checking, zipcode all unique in `NYC_Rental_Price` and `NYC_Housing Price`, but contain duplicate values 10463 and 11201 in `NYC_Zipcode`. Remove incorrect records.   
   - Upon removal of incorrect observations, the join was performed successfully with the resulting `Merged` dataset.
 - Description on the `Merged` dataset:      
@@ -110,7 +89,6 @@ table, th, td {
     - In `NYC_Rental_Price` dataset, I kept only the `zipcode`, `county`, `date`, `rental_price` columns.   
     - In `US_Housing_Price` dataset, I kept only the `zipcode`, `city`, `state`, `housing_price` columns.   
 
-##### **Tables**           
 ```{r Tables, results=FALSE, message=FALSE}
 
 # Table 1 --- average rental price in each borough and year
@@ -155,7 +133,6 @@ table, th, td {
            select(-year)
 ```
 
-###### Problem2 Discussion    
 - Month Discrepancy      
   - Some months do not have meaningful research values for collection.
   - Decided not to include some Months as the rental prices data are too incomplete within this period.    
@@ -166,20 +143,19 @@ table, th, td {
 - Remarks on Table1   
   - Across most boroughs, rental prices has a general increasing trend over year 2015-2024.   
   - Manhattan has the highest rental prices among all boroughs, with prices rising from 3022.04 in 2015 to 4078.44 in 2024.   
-  - For Staten Island, the data is missing from 2015 to 2019. From 2020 onward, values are recorded.    
-  - Price variation between boroughs is significant: Manhattan consistenty has the highest rental prices while the Staten Island has the lowest prices(for available years).    
+  - Staten Island data missing from 2015 to 2019. 
+  - Price variation significant: Manhattan highest rental prices while the Staten Island lowest prices(for available years).    
 - The following is a selection of Table2 giving a comparison of rental prices in Jan.2021 to rental prices in Jan.2020:   
 `r knitr::kable(head(Table2, n=20))`    
 - Table2   
-  - For most zipcodes, rental prices decreased from Jan.2020 to Jan.2021.   
-- The following Table3 gives the largest drop in price from Jan.2020 to Jan.2021 with neighborhoods included:   
+  - For most zipcodes, rental prices decreased.   
+- largest drop in price from Jan.2020 to Jan.2021 with neighborhoods included:   
 `r knitr::kable(Table3)`    
 - Table3   
   - `Lower Manhattan` has the largest price decrease of `$912.60` and `Southeast Bronx` has the least price decrease of `$16.46`.   
   - Rental prices in Bronx did not drop significantly.    
   - Staten Island data unavailable.  
 
-##### **Plots**            
 ```{r Plots, fig.width=12, fig.height=12, warning=FALSE, include=FALSE}
 
 # Plot1 --- NYC Rental Prices within each zipcode for all available years facilitating comparisons across borough
@@ -230,12 +206,10 @@ table, th, td {
   
 ```
 
-###### Problem3 Discussion    
 ```{r, fig.width=15, fig.height=10, message=FALSE, warning=FALSE}
   Plot1
 ```
 
-- Plot1 Remarks   
   - Large Geographic Rental Disparities.  
   - General upward rental price trend.   
   - Impact of COVID-19 is clear.   
@@ -244,7 +218,6 @@ table, th, td {
   Plot2
 ```
 
-- Plot2 Remarks   
   - CA has highest house prices whereas WV has the least.    
   - All states median below $1 million.
   - High Variability: CA, NY, CO; suggesting wider range of house prices    
@@ -253,7 +226,6 @@ table, th, td {
   Plot3
 ```
 
-- Plot3 Remarks   
   - General positive correlation.
 
 - Limitations:
